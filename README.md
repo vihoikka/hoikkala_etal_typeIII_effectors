@@ -17,11 +17,11 @@ Programs:
 ## Databases
 - NCBI complete prokaryotic genomes. Use the NCBI datasets tool to download the genomes and prepare the files using these steps:
   1. Install the datasets tool with Conda using ```conda install -c conda-forge ncbi-datasets-cli```
-  2. Download Bacterial and Archaeal genomes to separate folders in steps 2.1 and 2.2:
-    2.1 Download Bacterial genomes ```datasets download genome taxon 2 --filename bacteria_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```
-    2.2 Download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```
+  2. Download Bacterial and Archaeal genomes to separate folders in steps 2.1 and 2.2:\n
+  2.1 Download Bacterial genomes ```datasets download genome taxon 2 --filename bacteria_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```\n
+  2.2 Download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```\n
   3. "Rehydrate" both downloaded genome sets: ```datasets rehydrate --directory <directory_name>```
-  4. Changes ```genomes_folder``` path parameter in the snakemake script to match the bacterial folder and ```archaea_folder``` to match the Archaeal folder
+  4. Change ```genomes_folder``` path parameter in the snakemake script to match the bacterial folder and ```archaea_folder``` to match the Archaeal folder
   5. Copy all Archaeal genomes to the Bacterial genomes folder. The Bacterial genomes folder now contains *all* prokaryotic genomes.
   6. When the pipeline is run, list of genome IDs with domain information are automatically generated based on contents of the Bacterial and Archaeal folders. This is a crude approach, but since the taxonomy files from NCBI do not clearly state the domain of the organism, we need to do it this way. You could also try symlinks for the Archaeal genomes instead of copying them to save space.
 
