@@ -17,7 +17,7 @@ Programs:
 ## Databases
 - NCBI complete prokaryotic genomes. Use the NCBI datasets tool to download the genomes and prepare the files using these steps:
   1. Install the datasets tool with Conda using ```conda install -c conda-forge ncbi-datasets-cli```
-  2. Download Bacterial and Archaeal genomes to separate folders in steps 2.1 and 2.2:
+  2. Download Bacterial and Archaeal genomes to separate folders in steps iii and iv:
   3. Download Bacterial genomes ```datasets download genome taxon 2 --filename bacteria_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```
   4. Download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```
   5.  "Rehydrate" both downloaded genome sets: ```datasets rehydrate --directory <directory_name>```
