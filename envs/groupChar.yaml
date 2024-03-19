@@ -1,0 +1,12 @@
+name: groupCharEnv
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - pandas=0.20.3
+  - numpy==1.16.0
+  - biopython
+  - cd-hit==4.8.1
+  - hmmer==3.3.2
+  - gffutils

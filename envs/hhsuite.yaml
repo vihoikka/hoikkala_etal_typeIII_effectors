@@ -1,0 +1,11 @@
+channels:
+  - bioconda
+  - anaconda
+dependencies:
+  - hhsuite=3.3.0
+  - pandas
+  - seqkit
+  - biopython
+  - gffutils
+  - requests
+  - chardet

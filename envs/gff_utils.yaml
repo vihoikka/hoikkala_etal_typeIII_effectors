@@ -1,0 +1,10 @@
+channels:
+  - bioconda
+  - anaconda
+  - conda-forge
+dependencies:
+  - gffutils=0.11.1
+  - pandas=1.5.3
+  - regex
+  - biopython
+  - diamond==2.1.8

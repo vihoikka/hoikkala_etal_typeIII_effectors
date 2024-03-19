@@ -1,0 +1,11 @@
+channels:
+  - bioconda
+dependencies:
+  - sumaclust=1.0.31
+  - fasttree=2.1.11
+  - muscle=5.1
+  - hhsuite=3.3.0
+  - cd-hit=4.8.1
+  - mafft=7.515
+  - pandas
+  - biopython

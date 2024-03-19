@@ -1,0 +1,6 @@
+channels:
+  - russel88
+  - conda-forge
+  - bioconda
+dependencies:
+  - cctyper

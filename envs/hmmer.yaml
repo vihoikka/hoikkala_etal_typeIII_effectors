@@ -1,0 +1,10 @@
+channels:
+  - bioconda
+dependencies:
+  - hmmer=3.3.2
+  - pandas
+  - seqkit
+  - biopython
+  - gffutils
+  - muscle=5.1
+  - numpy==1.16.0
