@@ -224,7 +224,6 @@ if mode == "post_hmm":
             #membrane proteins
             "cam3": 140,
             "cam2": 140,
-            "tpr-chat": 600
         }
     
     max_lengths = { #maximum lengths for known effectors #TODO MODIFY WHEN ADDING NEW EFFECTORS
@@ -253,8 +252,7 @@ if mode == "post_hmm":
             "unk01": 9999,
             "cam3": 9999,
             "cam2": 9999,
-            "tpr-chat": 9999
-        }
+            }
 
     print("...Checking hmm results for cA type...")
     results = {}
@@ -303,6 +301,7 @@ if mode == "post_hmm":
                         print("...tirsaved detected with bitscore above 500. Adding to discovered effectors")
             else: #if no hashtag is present, the precise_hit is simply the effector or ring nuclease after the underscore
                 hit = re.split('_', row["target_name"])
+                print(hit)
                 hit_type = hit[0] #returns ca3, ca4, ca5, ca6 or SAM-AMP
                 precise_hit = hit[1] #returns the hmm target, e.g. nucc, can1, can2, cora...
 
