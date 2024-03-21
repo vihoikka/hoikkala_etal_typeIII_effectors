@@ -77,7 +77,7 @@ library(ComplexUpset)
 library(ggbeeswarm)
 
 #### Load data and tidy ####
-project = "R" #modify this to the project name. The folder must be in the data folder (relative to current R script)
+project = "190224" #modify this to the project name. The folder must be in the data folder (relative to current R script)
 
 #define paths
 info_path <- paste("data/",project,"/mastertable_v2.tsv", sep = "")
@@ -1620,17 +1620,11 @@ p2 <- ggplot(data = info, aes(x=has_effector, y = after_stat(count), fill = mult
   scale_fill_manual(values = colorBlindBlack8)
 p2
 
-#how likely is it that a locus that has no effector is in a sample that has another locus that has an effector?
-info_glm <- info %>%
-  select(has_effector, effector_elsewhere_in_sample_but_not_here, signal_sample, multisignal_sample, GGDD_hmm_boolean) %>%
-  mutate(has_effector = as.numeric(has_effector),
-         effector_elsewhere_in_sample_but_not_here = as.numeric(effector_elsewhere_in_sample_but_not_here),
-         multisignal_sample = as.numeric(multisignal_sample),
-         GGDD_hmm_boolean = as.numeric(GGDD_hmm_boolean),
-         signal_sample = as.numeric(signal_sample))
+# model formulated in a generalised linear model
+info$no_effector <- !info$has_effector
+glm_no_effector <- glm(no_effector ~ multilocus_sample, data = info, family = "binomial")
+summary(glm_no_effector)
 
-glm1 <- glm(has_effector ~ effector_elsewhere_in_sample_but_not_here + multisignal_sample + GGDD_hmm_boolean, data = info_glm, family = "binomial")
-summary(glm1)
 
 #### Summary tables ####
 
