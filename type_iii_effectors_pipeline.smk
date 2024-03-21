@@ -9,7 +9,7 @@ Options:
 NAR tidied down version (excluding redundant code)
 '''
 
-project = "NRA_130323" #defines the output folder
+project = "test_170923" #defines the output folder
 
 base_path = "/media/volume/st_andrews/new_effectors" + "/" + project #base path for storing the project folder
 program_root = "/home/ubuntu/st_andrews/new_effectors" #root folder for the program. Some 3rd party programs are run directly from here
@@ -2529,8 +2529,8 @@ rule create_html_file:
     output:
         html_file = base_path + "/type_iii_mastertable.html"
     params:
-        viz_dir_full = base_path + "/90_locus_viz",
-        viz_dir_relative = "90_locus_viz",
+        viz_dir_full = base_path + "/data",
+        viz_dir_relative = "data",
     conda:
         "envs/excel_output.yaml"
     shell:
