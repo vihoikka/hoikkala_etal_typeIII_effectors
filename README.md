@@ -16,15 +16,16 @@ Programs:
 ### Expected runtime after downloading and preparing databases is about 24 hours on 40-core HPC.
 
 ## Databases
-- NCBI complete prokaryotic genomes. Use the NCBI datasets tool to download the genomes and prepare the files using these steps:
+- NCBI complete prokaryotic genomes. Note that these are around 400 gb in total size. Use the NCBI datasets tool to download the genomes and prepare the files using these steps:
   1. Install the datasets tool with Conda using ```conda install -c conda-forge ncbi-datasets-cli```
   2. Download Bacterial and Archaeal genomes to separate folders in steps iii and iv:
-  3. Download Bacterial genomes ```datasets download genome taxon 2 --filename bacteria_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```
-  4. Download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes --include gff3 --annotated --assembly-level complete --assembly-source RefSeq```
-  5.  "Rehydrate" both downloaded genome sets: ```datasets rehydrate --directory <directory_name>```
-  6. Change ```genomes_folder``` path parameter in the snakemake script to match the bacterial folder and ```archaea_folder``` to match the Archaeal folder
-  7. Copy all Archaeal genomes to the Bacterial genomes folder. The Bacterial genomes folder now contains *all* prokaryotic genomes.
-  8. When the pipeline is run, list of genome IDs with domain information are automatically generated based on contents of the Bacterial and Archaeal folders. This is a crude approach, but since the taxonomy files from NCBI do not clearly state the domain of the organism, we need to do it this way. You could also try symlinks for the Archaeal genomes instead of copying them to save space.
+  3. Go to your desired folder and download Bacterial genomes ```datasets download genome taxon 2 --filename bacteria_genomes.zip --include gff3,genome,protein --dehydrated --annotated --assembly-level complete --assembly-source RefSeq```
+  4. Also download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes.zip --include gff3,genome,protein --annotated --assembly-level complete --assembly-source RefSeq```
+  5. Unzip both downloads
+  6.  "Rehydrate" both downloaded genome sets: ```datasets rehydrate --directory <directory_name>```, where directory points (relative to current location) to the unzipped data folders
+  7. Change ```genomes_folder``` path parameter in the snakemake script to match the bacterial folder and ```archaea_folder``` to match the Archaeal folder
+  8. Copy all Archaeal genomes to the Bacterial genomes folder. The Bacterial genomes folder now contains *all* prokaryotic genomes.
+  9. When the pipeline is run, list of genome IDs with domain information are automatically generated based on contents of the Bacterial and Archaeal folders. This is a crude approach, but since the taxonomy files from NCBI do not clearly state the domain of the organism, we need to do it this way. You could also try symlinks for the Archaeal genomes instead of copying them to save space.
 
 - HMM databases:
   - Known effectors: download from XX and put in path defined by variable "hmm_database_folder" in the Snakemake pipeline
