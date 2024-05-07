@@ -8,10 +8,10 @@ The run command that reproduces the results of the paper:
 ```snakemake --snakefile new_effectors.smk --use-conda --cores 40 --config getGenomesBy="local" genome_mode="all" cas10_anchor="True" cas10_tree_cluster="False"```
 
 ## Requirements
-Programs:
-- Snakemake and Conda. All other dependencies are installed when running with the --use-conda option
+- A conda environment with Snakemake 7 and Pandas 1.5.2 installed
+- All other dependencies are installed by the pipeline when running with the --use-conda option
 - Genome and HMM databases (see below)
-- Run on Ubuntu, not tested on other distributions
+- Ubuntu (not tested on other Linux distributions)
 
 ### Expected runtime after downloading and preparing databases is about 24 hours on 40-core HPC.
 
@@ -20,7 +20,7 @@ Programs:
   1. Install the datasets tool with Conda using ```conda install -c conda-forge ncbi-datasets-cli```
   2. Download Bacterial and Archaeal genomes to separate folders in steps iii and iv:
   3. Go to your desired folder and download Bacterial genomes ```datasets download genome taxon 2 --filename bacteria_genomes.zip --include gff3,genome,protein --dehydrated --annotated --assembly-level complete --assembly-source RefSeq```
-  4. Also download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes.zip --include gff3,genome,protein --annotated --assembly-level complete --assembly-source RefSeq```
+  4. Also download Archaeal genomes ```datasets download genome taxon 2157 --filename archaea_genomes.zip --include gff3,genome,protein --annotated --assembly-level complete```
   5. Unzip both downloads
   6.  "Rehydrate" both downloaded genome sets: ```datasets rehydrate --directory <directory_name>```, where directory points (relative to current location) to the unzipped data folders
   7. Change ```genomes_folder``` path parameter in the snakemake script to match the bacterial folder and ```archaea_folder``` to match the Archaeal folder
