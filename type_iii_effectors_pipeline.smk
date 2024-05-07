@@ -302,7 +302,8 @@ def aggregate_cora_neighbourhoods(wildcards):
     cora_loci = glob_wildcards(os.path.join(checkpoint_output,"{cora_locus}_crispr_locus_proteins.faa")).cora_locus
     return expand(base_path + "/52_cora_neighbour_analysis/{cora_locus}/neighbourhood_results.tsv", cora_locus=cora_loci)
 
-#Global parameters
+
+#Cas10 blast parameters
 blast_headers = "qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle sacc"
 blast_headers_group4 = "qseqid\tsseqid\tpident\tlength\tmismatch\tgapopen\tqstart\tqend\tsstart\tsend\tevalue\tbitscore\tlocus"
 cas10_e_value = "1e-20"
@@ -313,7 +314,6 @@ group4_pfam_headers = "target_name\taccession\tquery_name\taccession\tE-value\ts
 print("Starting CRISPR-Cas type III characterisation pipeline")
 
 rule all: 
-    #input: base_path + "/01_genomelist/annotated_genomelist.csv"
     input: base_path + "/done"
 
 #global filepaths
@@ -1586,22 +1586,24 @@ rule Cas10_GGDD_hmmer:
         raw_table_GGDD = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits.out",
         raw_table_GGDE = base_path + "/Cas10_GGDD_hmm_profiles/GGDE_HMM_hits.out"
     params:
-        out = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits_temp.out",
-        rows = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits_rows.out",
+        out_GGDD = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits_temp.out",
+        out_GGDE = base_path + "/Cas10_GGDD_hmm_profiles/GGDE_HMM_hits_temp.out",
+        rows_GGDD = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits_rows.out",
+        rows_GGDE = base_path + "/Cas10_GGDD_hmm_profiles/GGDE_HMM_hits_rows.out",
         rows1 = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits_rows1.out",
-        E = "1e-03"
+        E = "1e-02"
     conda: "envs/hmmer.yaml"
     shell:
         '''
-        hmmscan --tblout {params.out} --cpu 8 -E {params.E} {input.hmm_db_GGDD} {input.cas10_sequences}
-        grep -v "#" {params.out} > {params.rows}||:
+        hmmscan --tblout {params.out_GGDD} --cpu 8 -E {params.E} {input.hmm_db_GGDD} {input.cas10_sequences}
+        grep -v "#" {params.out_GGDD} > {params.rows_GGDD}||:
         echo "target_name accession query_name accession E-value score bias E-value_best_domain score bias exp reg clu over env dom rep inc description_of_target" > {output.raw_table_GGDD}
-        cat {params.rows} >> {output.raw_table_GGDD}
+        cat {params.rows_GGDD} >> {output.raw_table_GGDD}
 
-        hmmscan --tblout {params.out} --cpu 8 -E {params.E} {input.hmm_db_GGDE} {input.cas10_sequences}
-        grep -v "#" {params.out} > {params.rows}||:
+        hmmscan --tblout {params.out_GGDE} --cpu 8 -E {params.E} {input.hmm_db_GGDE} {input.cas10_sequences}
+        grep -v "#" {params.out_GGDE} > {params.rows_GGDE}||:
         echo "target_name accession query_name accession E-value score bias E-value_best_domain score bias exp reg clu over env dom rep inc description_of_target" > {output.raw_table_GGDE}
-        cat {params.rows} >> {output.raw_table_GGDE}
+        cat {params.rows_GGDE} >> {output.raw_table_GGDE}
         '''
 
 rule merge_GGDD_hmm_with_info:
@@ -1611,11 +1613,16 @@ rule merge_GGDD_hmm_with_info:
     input:
         info_table = rules.concatenate_type_iii_info.output,
         GGDD_hmm_hits = rules.Cas10_GGDD_hmmer.output.raw_table_GGDD,
-        GGDE_hmm_hits = rules.Cas10_GGDD_hmmer.output.raw_table_GGDE
+        GGDE_hmm_hits = rules.Cas10_GGDD_hmmer.output.raw_table_GGDE,
+        cas10s_faa = rules.Cas10_concatenate.output
     output:
         merged_table = base_path + "/Cas10_GGDD_hmm_profiles/GGDD_HMM_hits_merged.tsv"
+    params:
+        output_folder = base_path + "/Cas10_GGDD_hmm_profiles"
     run:
         import pandas as pd
+        from Bio import SeqIO
+
         info = pd.read_csv(str(input.info_table), sep = "\t")
         hmm_hits_GGDD = pd.read_csv(str(input.GGDD_hmm_hits), sep = '\s+')
         hmm_hits_GGDE = pd.read_csv(str(input.GGDE_hmm_hits), sep = '\s+')
@@ -1639,11 +1646,56 @@ rule merge_GGDD_hmm_with_info:
         merged["GGDD_hmm_boolean"] = merged["GGDD_hmm_boolean"].fillna(False)
         merged["GGDE_hmm_boolean"] = merged["GGDE_hmm_boolean"].fillna(False)
 
+
+        #read in the Cas10 sequences using biopython
+        cas10s = SeqIO.to_dict(SeqIO.parse(str(input.cas10s_faa), "fasta"))
+
+        all_cyclase_literals = ["SGDD", "AGDD", "GGED", "GGDD", "GGED", "GGDE", "EGDD", "GEDD", "DGDD", "AGDE", "KGDD", "AGDE"] #updated list of possible cyclase motifs
+
+        #create a dictionary of the literals and add count as value
+        all_cyclase_literals_dic = {literal: 0 for literal in all_cyclase_literals}
+
+        #create a column cyclase_literal_sequence in the merged table
+        merged["cyclase_literal_sequence"] = ""
+
+        #the merged contains a column "cyclase_literal". This column is true if the sequence contains one of the motifs in all_cyclase_literals. Go through each cas10 sequence
+        for index, row in merged.iterrows():
+            locus = row["Locus"]
+            try:
+                cas10 = cas10s[locus].seq
+                #check if the sequence contains any of the motifs
+                for motif in all_cyclase_literals:
+                    if motif in cas10:
+                        merged.at[index, "cyclase_literal"] = True
+                        print("Cyclase found in " + locus + " with motif " + motif)
+                        merged.at[index, "cyclase_literal_sequence"] = motif
+                        break
+                else:
+                    print("No cyclase found for " + locus)
+                    merged.at[index, "cyclase_literal"] = False
+            except:
+                print("No Cas10 found in fasta for " + locus)
+
         #create new column cyclase which is true only if column GGDD_hmm_boolean or column GGDE_hmm_boolean is true and cyclase_literal is true
         merged["cyclase"] = merged["cyclase_literal"] & (merged["GGDD_hmm_boolean"] | merged["GGDE_hmm_boolean"])
 
-        #from the final file, remove all columns but Locus, GGDD_E-value and GGDD_hmm_boolean
-        merged = merged[["Locus", "GGDD_E-value", "GGDD_hmm_boolean", "GGDE_E-value", "GGDE_hmm_boolean", "cyclase", "cyclase_literal"]]
+        #in the all_cyclase_literals_dic, add the count of each motif
+        for index, row in merged.iterrows():
+            motif = row["cyclase_literal_sequence"]
+            if motif in all_cyclase_literals_dic:
+                all_cyclase_literals_dic[motif] += 1
+
+        #create a new dataframe from the dictionary
+        cyclase_literal_df = pd.DataFrame(list(all_cyclase_literals_dic.items()), columns = ["motif", "count"])
+
+        #count percentages of each motif
+        cyclase_literal_df["percentage"] = round(cyclase_literal_df["count"] / len(merged) * 100, 1)
+
+        #save the dataframe to a file
+        cyclase_literal_df.to_csv(params.output_folder + "/cyclase_literal_count.tsv", sep = "\t", index = False)
+
+        #from the final file, remove all columns but Locus, GGDD_E-value and GGDD_hmm_boolean and cyclase_literal_sequence
+        merged = merged[["Locus", "GGDD_E-value", "GGDD_hmm_boolean", "GGDE_E-value", "GGDE_hmm_boolean", "cyclase", "cyclase_literal", "cyclase_literal_sequence"]]
 
         #save the merged table
         merged.to_csv(str(output.merged_table), sep = "\t", index = False)
@@ -2200,6 +2252,33 @@ rule mastercombiner:
         ]
         mastertable_group4["Locus"].to_csv(str(output.group4_IDs), sep = "\t", index = False)
 
+        #some loci are wrongly subtyped. Use this dictionary to manually correct them. Key shows locus, value shows corrected subtype
+        subtype_corrections = {
+            "GCA_003201765.2_3": "III-D",
+            "GCF_003201765.2_2": "III-D",
+            "GCA_022845955.1_1": "III-D",
+            "GCA_001548075.1_0": "III-D",
+            "GCF_014495845.1_1": "III-D",
+            "GCA_000143965.1_0": "III-D",
+            "GCA_000010725.1_0": "III-D",
+            "GCF_019900845.1_1": "III-D",
+            "GCF_000227745.2_1": "III-B",
+            "GCA_000970265.1_31": "III-F",
+            "GCF_000022425.1_4": "III-F",
+            "GCF_000022405.1_3": "III-F",
+            "GCF_009602405.1_0": "III-F",
+            "GCA_003201675.2_2": "III-F",
+            "GCF_003201675.2_3": "III-F",
+            "GCF_028472365.1_2": "III-F",
+            "GCA_000338775.1_1": "III-F",
+            "GCA_000011205.1_3": "III-F",
+            "GCA_003967175.1_0": "III-F",
+        }
+
+        #correct the subtypes for the given loci (column Locus)
+        for locus, subtype in subtype_corrections.items():
+            mastertable.loc[mastertable["Locus"] == locus, "Subtype"] = subtype
+
         #drop any duplicate rows
         mastertable = mastertable.drop_duplicates()
         mastertable.to_csv(str(output.final_info_table), sep = "\t", index = False)
@@ -2477,47 +2556,6 @@ rule concatenate_locus_viz:
         touch {output}
         '''
         
-        
-# rule create_excel_file:
-#     '''
-#     This creates an Excel file out of the mastertable and adds hyperlinks
-#     to the loci figures and the associated .tsv files
-#     '''
-#     input:
-#         mastertable = rules.mastercombiner.output.final_info_table,
-#     output:
-#         excel_file = base_path + "/type_iii_mastertable.xlsx"
-#     params:
-#         viz_dir_full = base_path + "/90_locus_viz",
-#         viz_dir_relative = "90_locus_viz",
-#     conda:
-#         "envs/excel_output.yaml"
-#     shell:
-#         '''
-#         python scripts/excel_writer.py --mastertable {input.mastertable} --viz_dir_full {params.viz_dir_full} --viz_dir_relative {params.viz_dir_relative} --output_excel {output.excel_file}
-#         '''
-
-
-
-# rule create_excel_file:
-#     '''
-#     This creates an Excel file out of the mastertable and adds hyperlinks
-#     to the loci figures and the associated .tsv files
-#     '''
-#     input:
-#         mastertable = rules.mastercombiner.output.final_info_table,
-#     output:
-#         excel_file = base_path + "/type_iii_mastertable.xlsx"
-#     params:
-#         viz_dir_full = base_path + "/90_locus_viz",
-#         viz_dir_relative = "90_locus_viz",
-#     conda:
-#         "envs/excel_output.yaml"
-#     shell:
-#         '''
-#         python scripts/excel_writer.py --mastertable {input.mastertable} --viz_dir_full {params.viz_dir_full} --viz_dir_relative {params.viz_dir_relative} --output_excel {output.excel_file}
-#         '''
-
 
 rule create_html_file:
     '''
@@ -2646,3 +2684,4 @@ rule final:
         cp -r /media/volume/st_andrews/new_effectors/{project}/17_CorA_tree/CorA_tree.txt /media/volume/st_andrews/new_effectors/{project}/R/cora_neighbourhood
         cp -r /media/volume/st_andrews/new_effectors/{project}/16_CorA_align/CorA_alignment.afa /media/volume/st_andrews/new_effectors/{project}/R/cora_neighbourhood
         '''
+        

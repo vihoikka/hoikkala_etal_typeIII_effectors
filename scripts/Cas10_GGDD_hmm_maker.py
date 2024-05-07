@@ -53,7 +53,7 @@ if not args.use_existing_alignment:
         if start > 100:
           print("adding " + motif + " motif for locus " + row["Locus"])
           cas10_object = cas10_objects[row["Locus"]]
-          cyclase_motifs.append(SeqRecord(cas10_object.seq[start-50:start+50], id=row["Locus"], description=""))
+          cyclase_motifs.append(SeqRecord(cas10_object.seq[start-50:start+100], id=row["Locus"], description=""))
 
   #Write the trimmed sequences to a fasta file
   SeqIO.write(cyclase_motifs, args.faa, 'fasta')
