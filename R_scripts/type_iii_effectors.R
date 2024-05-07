@@ -1,7 +1,8 @@
 # R scripts for reproducing figures in the manuscript by Hoikkala, Graham and White (2024) on CRISPR-Cas type III effectors
 
 #### LIBRARIES ####
-
+if (!require("devtools", quietly = TRUE))
+  install.packages("devtools")
 devtools::install_github("quinten-goens/plotly.R@fix/kaleido-export-bug") #fixes saving bug, see https://github.com/plotly/plotly.R/pull/2228
 
 install.packages("wakefield")
@@ -26,13 +27,14 @@ devtools::install_github("krassowski/complex-upset")
 install.packages('ComplexUpset')
 install.packages('ggbeeswarm')
 
-BiocManager::install("ggbio")
-BiocManager::install("GenomicRanges")
+
 
 
 if (!require("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
+BiocManager::install("ggbio")
+BiocManager::install("GenomicRanges")
 BiocManager::install("ggtree")
 BiocManager::install("ggtreeExtra", force = TRUE)
 
@@ -77,7 +79,7 @@ library(ComplexUpset)
 library(ggbeeswarm)
 
 #### Load data and tidy ####
-project = "190224" #modify this to the project name. The folder must be in the data folder (relative to current R script)
+project = "300424" #modify this to the project name. The folder must be in the data folder (relative to current R script)
 
 #define paths
 info_path <- paste("data/",project,"/mastertable_v2.tsv", sep = "")
@@ -177,7 +179,7 @@ info_for_cas10length <- dplyr::rename(info_for_cas10length, mean_temperature_plo
 #### Colours and other parameters ####
 
 colorBlindBlack8  <- c("#404040", "#E69F00", "#56B4E9", "#009E73", 
-                       "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+                       "#F0E442", "#CC79A7", "#D55E00", "#CC79A7")
 colorBlindBlack8_2  <- c("#000000", "#D55E00")
 label_fontsize = 2
 
@@ -1210,13 +1212,11 @@ plot_path <- paste("data/",project,"/plots/",project,"_cOA_temps_HD.png", sep = 
 ggsave(plot_path, plot = p2, width = 6, height = 6)
 
 
-#### Loop based Cas10 tree ####
+#### Figure 1 main text version ####
 # Create associated molecules and colors
 associated_effectors <- c("nucc", "csx1", "can1.2", "cami1", "cam1", "calpl", "csm6.ca6", "cora")
-associated_colors <- c("#a8d2e1", "#7fb1dc", "#5790d4", "#2d74bb", "#1859a4", "#0c4d8d", "#003166", "#9ee493", "#ff743e")
-associated_colors <- c("#a8d2e1", "#6fb0dc", "#388dd1", "#1561a3", "#123675", "#091848", "#9ee493", "#ff743e")
-#use colorbrewer to make to shades of pleasant blue
-HD_colors <- c("#6fb0dc", "#123675")
+associated_colors <- c("#CC79A7", "#6fb0dc", "#388dd1", "#1561a3", "#123675", "#091848", "#9ee493", "#ff743e")
+HD_colors <- c("#4a4a4a", "#bfbfbf")
 label_fontsize <- 2
 offsets <- c(1, 2.5, 3.5, 4.5, 5.5, 6.5, 8, 9.5)
 # Combine into a named list
@@ -1226,7 +1226,71 @@ lane_width = 0.03
 rownames(info) <- info$Locus
 cas10_tree$tip.label <- as.character(cas10_tree$tip.label)
 
-#make the Locus colun the first column in info
+#make the Locus column the first column in info
+info <- info[, c('Locus', setdiff(names(info), 'Locus'))]
+
+pX <- ggtree(cas10_tree, layout="circular", branch.length = "none", size=0.15, open.angle=20, aes(color=Subtype, labels=genus) +
+               theme(legend.position = "none"))  %<+% info
+
+
+
+pX <- gheatmap(pX, info[c("Subtype")], offset=-1.3, width=0.06, colnames = TRUE, colnames_angle=85, colnames_offset_y = 0, font.size = label_fontsize, color = "grey", hjust = 1, legend_title = "Subtype (inner ring)") + 
+  scale_fill_manual(values = colorBlindBlack8, name = "Subtype\n(inner ring)") +
+  theme(text = element_text(size = 14)) # + geom_point2(aes(subset = isTip == TRUE & domain == "Archaea")), color = "red", size = 0.1 #uncomment to label archaea
+
+pX <- pX + geom_point2(aes(subset = (cyclase == FALSE)), color = "red", size = 0.1)
+
+pX <- pX  + theme(legend.position=c(0.95, 0.5),
+                 legend.title=element_text(size=7),
+                 legend.text=element_text(size=6),
+                 legend.spacing.y = unit(0.02, "cm"))
+
+
+custom_labels <- c("NucC", "Csx1", "Can1-2", "Cami1", "Cam1", "CalpL", "Csm6", "CorA")
+names(custom_labels) <- associated_effectors
+
+# Iterate over each effector
+for(i in 1:length(associated_effectors)){
+  pX <- pX + new_scale_fill()
+  pX <- gheatmap(pX, info[c(associated_effectors[i])], offset=offsets[i] + 0.3, width=lane_width, colnames = TRUE,
+                 colnames_angle=85, colnames_offset_y = 0, colnames_offset_x = 0, font.size = label_fontsize, color = "grey",
+                 hjust = 1, custom_column_labels = custom_labels[[associated_effectors[i]]]) +
+    scale_fill_manual(values=c("white", associated_colors[i]), guide = "none") + 
+    theme(legend.position = 'none')
+}
+
+pX_opened <- open_tree(pX, 15)
+
+pX_opened <- pX_opened  + theme(legend.position=c(0.95, 0.5),
+                  legend.title=element_text(size=7),
+                  legend.text=element_text(size=6),
+                  legend.spacing.y = unit(0.02, "cm"))
+
+#save pX
+plot_path <- paste("data/",project,"/plots/",project,"_Cas10_effectors_loop.png", sep = "")
+ggsave(plot_path, plot = pX_opened, width = 10, height = 10)
+
+#create hi-res version
+plot_path <- paste("data/",project,"/plots/",project,"_Cas10_effectors_loop_hi-res.png", sep = "")
+ggsave(plot_path, plot = pX_opened, width = 40, height = 40)
+
+cyclase_deficient_df <- subset(info, cyclase == FALSE)
+
+#### Figure 1 SI version ####
+# Create associated molecules and colors
+associated_effectors <- c("nucc", "csx1", "can1.2", "cami1", "cam1", "calpl", "csm6.ca6", "cora")
+associated_colors <- c("#CC79A7", "#6fb0dc", "#388dd1", "#1561a3", "#123675", "#091848", "#9ee493", "#ff743e")
+HD_colors <- c("#4a4a4a", "#bfbfbf")
+label_fontsize <- 2
+offsets <- c(1, 2.5, 3.5, 4.5, 5.5, 6.5, 8, 9.5)
+# Combine into a named list
+molecule_color_list <- setNames(associated_colors, associated_effectors) 
+lane_width = 0.03
+
+rownames(info) <- info$Locus
+cas10_tree$tip.label <- as.character(cas10_tree$tip.label)
+
+#make the Locus column the first column in info
 info <- info[, c('Locus', setdiff(names(info), 'Locus'))]
 
 pX <- ggtree(cas10_tree, layout="circular", branch.length = "none", size=0.15, open.angle=20, aes(color=Subtype, labels=genus) +
@@ -1238,6 +1302,8 @@ pX <- gheatmap(pX, info[c("Subtype")], offset=-1.3, width=0.06, colnames = TRUE,
   scale_fill_manual(values = colorBlindBlack8, name = "Subtype") +
   theme(text = element_text(size = 14)) # + geom_point2(aes(subset = isTip == TRUE & domain == "Archaea")), color = "red", size = 0.1 #uncomment to label archaea
 
+
+pX <- pX + geom_point2(aes(subset = (cyclase == FALSE)), color = "red", size = 0.1)
 
 custom_labels <- c("NucC", "Csx1", "Can1-2", "Cami1", "Cam1", "CalpL", "Csm6", "CorA")
 names(custom_labels) <- associated_effectors
@@ -1278,10 +1344,30 @@ pX <- pX + new_scale_fill() + theme(legend.position = 'none') +
 pX_opened <- open_tree(pX, 15)
 
 #save pX
-plot_path <- paste("data/",project,"/plots/",project,"_Cas10_effectors_loop.png", sep = "")
+plot_path <- paste("data/",project,"/plots/",project,"_Cas10_effectors_loop_SI.png", sep = "")
 ggsave(plot_path, plot = pX_opened, width = 10, height = 10)
 
-#### Cas10 cOA ring, looped ####
+### Figure 1 tiplabel version ####
+
+#create a ggtree that displays the tiplabels
+tiplabel_tree <- ggtree(cas10_tree, layout="circular", branch.length = "none", size=0.15, open.angle=20, aes(color=Subtype, labels=genus)) +
+  #add small tiplabels
+  geom_tiplab(size = 2, hjust = 0.5, vjust = 0.5, offset = 0.1)
+
+#attach info to the tree
+tiplabel_tree <- tiplabel_tree %<+% info
+
+tiplabel_tree <- gheatmap(tiplabel_tree, info[c("Subtype")], offset=2, width=0.06, colnames = TRUE, colnames_angle=85, colnames_offset_y = 0, font.size = label_fontsize, color = "grey", hjust = 1, legend_title = "Subtype") + 
+  scale_fill_manual(values = colorBlindBlack8, name = "Subtype") +
+  theme(text = element_text(size = 14)) # + geom_point2(aes(subset = isTip == TRUE & domain == "Archaea")), color = "red", size = 0.1 #uncomment to label archaea
+
+tiplabel_tree <- tiplabel_tree + geom_point2(aes(subset = (cyclase == FALSE)), color = "red", size = 0.1)
+
+#save as hi res
+plot_path <- paste("data/",project,"/plots/",project,"_Cas10_effectors_loop_tiplabels.png", sep = "")
+ggsave(plot_path, plot = tiplabel_tree, width = 40, height = 40)
+
+#### Figure 1: signal molecule version ####
 # Create associated molecules and colors
 signals <- c("ca3", "ca4", "ca6", "sam.amp")
 associated_colors_signals <- c("turquoise4", "lightcoral", "forestgreen", "dodgerblue4")
@@ -1330,7 +1416,117 @@ plot_path <- paste("data/",project,"/plots/",project,"_Cas10_effectors_loop_sign
 ggsave(plot_path, plot = pX_opened, width = 10, height = 10)
 
 
-#### Upset plot of cooccurrence between different effectors ####
+#### Figure 2: sunburst of signals and effectors ####
+#Create a sunburst graph showing the distribution of effectors so that the associated signal molecule is in the inner ring
+#https://plotly.com/r/sunburst-charts/
+
+info_sunburst <- info[c("nucc", "csx1", "can1.2", "cami1", "cam1", "csx23", "calpl", "csm6.ca6", "saved.chat", "cora")]
+
+primary_df <- data.frame(
+  signal_molecule = c("ca3", "ca4", "ca4", "ca4", "ca4", "ca4", "ca4", "ca6","ca3", "sam.amp"),
+  effector = c("nucc", "csx1", "can1.2", "cami1", "cam1", "csx23", "calpl", "csm6.ca6", "saved.chat", "cora")
+)
+
+effector_count <- sapply(info_sunburst, function(x) sum(x == TRUE))
+
+final_df <- merge(primary_df, effector_count, by.x = "effector", by.y = "row.names")
+
+# Adding signal molecule to the effector for unique ids
+final_df$id <- paste(final_df$effector, final_df$signal_molecule, sep="-")
+
+# Adding signal molecule alone as id (adding these into the effector column)
+updated_effector <- unique(c(final_df$effector, final_df$signal_molecule))
+
+total_df <- data.frame(id = updated_effector, 
+                       labels = updated_effector, 
+                       parents = ifelse(updated_effector %in% final_df$signal_molecule, "", 
+                                        final_df$signal_molecule),
+                       values = ifelse(updated_effector %in% final_df$effector, 
+                                       final_df$y, 0)
+)
+
+blue_shades <- c("#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b", "#000000")
+blue_shades <- c("#99BBDD", "#7799CC", "#5577BB", "#3366AA", "#115599", "#004488", "#003377", "#002266", "#001155", "#000044")
+
+# calculate numbers of unique 'ca4' effectors
+ca4_num <- length(unique(total_df$id[total_df$parents == "ca4"]))
+
+# repeat the colors so the length of the color array equals to the number of unique 'ca4' effectors
+ca4_colors <- rep(blue_shades, length.out = ca4_num)
+
+ca3_colors <- rep(c("#ceecf5", "#a5c9d4"), length(unique(total_df$id[total_df$parents == "ca3"])))
+
+
+# all others might be another color, say, grey
+other_colors <- rep("grey", length(unique(total_df$id)) - ca4_num)
+
+total_df$percentage <- total_df$values/sum(total_df$values)
+
+#order total_df by percentage (decreasing)
+
+total_df_only_ca4 <- total_df[total_df$parents == "ca4",]
+total_df_only_ca4 <- total_df_only_ca4[order(total_df_only_ca4$percentage, decreasing = F),]
+total_df_only_ca4$color <- ifelse(total_df_only_ca4$parents == "ca4", ca4_colors, other_colors)
+
+#merge the ca4_only with total_df
+total_df <- merge(total_df, total_df_only_ca4, by = c("id", "labels", "parents", "values", "percentage"), all.x = TRUE)
+
+# color all except ca4 parented as grey
+total_df$color[total_df$id != "ca4" & total_df$parents != "ca4"] <- "grey"
+
+total_df$color[total_df$id == "ca3"] <- "#854d6b"
+total_df$color[total_df$id == "ca4"] <- "#336699" 
+total_df$color[total_df$id == "ca6"] <- "#9ee493"
+total_df$color[total_df$id == "sam.amp"] <- "#ff743e"
+
+total_df$color[total_df$id == "csm6.ca6"] <- "green4"
+total_df$color[total_df$id == "cora"] <- "peachpuff3"
+
+total_df$color[total_df$id == "saved.chat"] <- "#eba9cc"
+total_df$color[total_df$id == "nucc"] <- "#CC79A7"
+
+
+fig <- plot_ly(total_df, 
+               ids = ~id,
+               labels = ~labels,
+               parents = ~parents,
+               values = ~values,
+               #display label and percentage
+               #textinfo = "label+percent parent",
+               #make the textinfo smaller
+               textfont = list(size = 20),
+               type = 'sunburst',
+               marker = list(colors = ~color),
+               textfont = list(size = 40)
+)
+fig
+
+#draw the same sunburst plot but without labels
+fig <- plot_ly(total_df, 
+               ids = ~id, 
+               labels = "",
+               parents = ~parents, 
+               values = ~values,
+               type = 'sunburst', 
+               marker = list(colors = ~color),
+               textfont = list(size = 40)
+)
+fig
+
+#save using orca if it works (uncomment installation scripts below if not installed). If not working, just save the sunburst from the RStudio viewer panel -> export -> save as png
+plot_path = paste("data/",project,"/plots/",project,"_sunburst.png", sep = "")
+#reticulate::install_miniconda()
+#reticulate::conda_install('r-reticulate', 'python-kaleido')
+#reticulate::conda_install('r-reticulate', 'plotly', channel = 'plotly')
+#reticulate::use_miniconda('r-reticulate')
+#install kaleido too
+#reticulate::py_install('kaleido')
+save_image(fig, plot_path, width = 1000, height = 1000, scale = 1)
+
+
+
+
+#### Figure 6: Upset plot of cooccurrence between different effectors ####
 #When subsetting for all, archaea or thermophiles, change the following:
 # - The subsetting function at the top (first thing in this section)
 # - Signal molecule associations at the top of this section
@@ -1480,10 +1676,10 @@ upset(upset_merged_info[-1],
       stripes=upset_stripes(
         mapping=aes(color=cOAs),
         colors=c(
-          'cA3'='#d7fcd8',
-          'cA4'='#fcf4e1',
-          'cA6'='#e6eeff',
-          'SAM-AMP' = '#dbdbdb'
+          'cA3'='#e0c6d8',
+          'cA4'='#c1d6e8',
+          'cA6'='#e8fae8',
+          'SAM-AMP' = '#ffd9cc'
         ),
         data=effector_coa_data
       ),
@@ -1495,114 +1691,6 @@ upset(upset_merged_info[-1],
         axis.text.x = element_blank())
 
 dev.off()
-
-#### Sunburst plotly ####
-#Create a sunburst graph showing the distribution of effectors so that the associated signal molecule is in the inner ring
-#https://plotly.com/r/sunburst-charts/
-
-info_sunburst <- info[c("nucc", "csx1", "can1.2", "cami1", "cam1", "csx23", "calpl", "csm6.ca6", "saved.chat", "cora")]
-
-primary_df <- data.frame(
-  signal_molecule = c("ca3", "ca4", "ca4", "ca4", "ca4", "ca4", "ca4", "ca6","ca3", "sam.amp"),
-  effector = c("nucc", "csx1", "can1.2", "cami1", "cam1", "csx23", "calpl", "csm6.ca6", "saved.chat", "cora")
-)
-
-effector_count <- sapply(info_sunburst, function(x) sum(x == TRUE))
-
-final_df <- merge(primary_df, effector_count, by.x = "effector", by.y = "row.names")
-
-# Adding signal molecule to the effector for unique ids
-final_df$id <- paste(final_df$effector, final_df$signal_molecule, sep="-")
-
-# Adding signal molecule alone as id (adding these into the effector column)
-updated_effector <- unique(c(final_df$effector, final_df$signal_molecule))
-
-total_df <- data.frame(id = updated_effector, 
-                       labels = updated_effector, 
-                       parents = ifelse(updated_effector %in% final_df$signal_molecule, "", 
-                                        final_df$signal_molecule),
-                       values = ifelse(updated_effector %in% final_df$effector, 
-                                       final_df$y, 0)
-)
-
-blue_shades <- c("#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b", "#000000")
-blue_shades <- c("#99BBDD", "#7799CC", "#5577BB", "#3366AA", "#115599", "#004488", "#003377", "#002266", "#001155", "#000044")
-
-# calculate numbers of unique 'ca4' effectors
-ca4_num <- length(unique(total_df$id[total_df$parents == "ca4"]))
-
-# repeat the colors so the length of the color array equals to the number of unique 'ca4' effectors
-ca4_colors <- rep(blue_shades, length.out = ca4_num)
-
-ca3_colors <- rep(c("#ceecf5", "#a5c9d4"), length(unique(total_df$id[total_df$parents == "ca3"])))
-
-
-# all others might be another color, say, grey
-other_colors <- rep("grey", length(unique(total_df$id)) - ca4_num)
-
-total_df$percentage <- total_df$values/sum(total_df$values)
-
-#order total_df by percentage (decreasing)
-
-total_df_only_ca4 <- total_df[total_df$parents == "ca4",]
-total_df_only_ca4 <- total_df_only_ca4[order(total_df_only_ca4$percentage, decreasing = F),]
-total_df_only_ca4$color <- ifelse(total_df_only_ca4$parents == "ca4", ca4_colors, other_colors)
-
-#merge the ca4_only with total_df
-total_df <- merge(total_df, total_df_only_ca4, by = c("id", "labels", "parents", "values", "percentage"), all.x = TRUE)
-
-# color all except ca4 parented as grey
-total_df$color[total_df$id != "ca4" & total_df$parents != "ca4"] <- "grey"
-
-total_df$color[total_df$id == "ca3"] <- "#ceecf5"
-total_df$color[total_df$id == "ca4"] <- "#336699" 
-total_df$color[total_df$id == "ca6"] <- "#9ee493"
-total_df$color[total_df$id == "sam.amp"] <- "#ff743e"
-
-#make nucc like peachpuff but darker
-total_df$color[total_df$id == "csm6.ca6"] <- "green4"
-total_df$color[total_df$id == "cora"] <- "peachpuff3"
-
-total_df$color[total_df$id == "saved.chat"] <- ca3_colors[1]
-total_df$color[total_df$id == "nucc"] <- ca3_colors[2]
-
-
-fig <- plot_ly(total_df, 
-               ids = ~id,
-               labels = ~labels,
-               parents = ~parents,
-               values = ~values,
-               #display label and percentage
-               #textinfo = "label+percent parent",
-               #make the textinfo smaller
-               textfont = list(size = 20),
-               type = 'sunburst',
-               marker = list(colors = ~color),
-               textfont = list(size = 40)
-)
-fig
-
-#draw the same sunburst plot but without labels
-fig <- plot_ly(total_df, 
-               ids = ~id, 
-               labels = "",
-               parents = ~parents, 
-               values = ~values,
-               type = 'sunburst', 
-               marker = list(colors = ~color),
-               textfont = list(size = 40)
-)
-fig
-
-#save using orca if it works (uncomment installation scripts below if not installed). If not, just save the sunburst from the RStudio viewer panel -> export -> save as png
-plot_path = paste("data/",project,"/plots/",project,"_sunburst.png", sep = "")
-#reticulate::install_miniconda()
-#reticulate::conda_install('r-reticulate', 'python-kaleido')
-#reticulate::conda_install('r-reticulate', 'plotly', channel = 'plotly')
-#reticulate::use_miniconda('r-reticulate')
-#install kaleido too
-#reticulate::py_install('kaleido')
-save_image(fig, plot_path, width = 1000, height = 1000, scale = 1)
 
 
 
@@ -1727,3 +1815,7 @@ summary_table <- data.frame(
 )
 
 summary_table
+
+
+iii_c_cyclase <- subset(info, cyclase == TRUE & Subtype == "III-C")
+iii_c_cyclase
