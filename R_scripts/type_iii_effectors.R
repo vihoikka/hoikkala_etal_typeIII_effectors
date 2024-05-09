@@ -16,6 +16,7 @@ install.packages("ggrepel")
 install.packages("ggnewscale")
 install.packages("ragg")
 install.packages("ggtreeExtra")
+install.packages("ggtree")
 install.packages("ggrepel")
 install.packages("ggforce")
 install.packages("tidyverse")
@@ -36,6 +37,7 @@ if (!require("BiocManager", quietly = TRUE))
 BiocManager::install("ggbio")
 BiocManager::install("GenomicRanges")
 BiocManager::install("ggtree")
+BiocManager::install("gggenes")
 BiocManager::install("ggtreeExtra", force = TRUE)
 
 library(tidyverse)
@@ -184,6 +186,7 @@ colorBlindBlack8_2  <- c("#000000", "#D55E00")
 label_fontsize = 2
 
 #### Known effector trees ####
+#This produces the supplementary information table for known effectors as well as annotated trees of known effectors
 # Effector trees
 tree_dir <- paste("data/", project, "/effector_trees", sep = "")
 # Get a list of all the .txt files in that directory
@@ -197,7 +200,7 @@ trees_length = as.numeric(length(seq_along(tree_files)))
 
 for(i in seq_along(tree_files)) {
   print(i)
-  #i <- 1
+  i <- 10
   basename <- sub("_tree.txt", "", basename(tree_files[i]))
   trees[[i]] <- read.tree(tree_files[i])
   
@@ -224,7 +227,7 @@ for(i in seq_along(tree_files)) {
   # Add the protein_length column from df2 to df1
   effector_analysis_raw <- merge(x = effector_analysis_raw, y = effector_analysis[,c("query_name","protein_length")], by = "query_name", all.x = TRUE)
   #add subtype to effector analysis
-  effector_analysis <- left_join(effector_analysis, info[c('Locus', 'Subtype', 'domain')], by = c('locus' = 'Locus'))
+  effector_analysis <- left_join(effector_analysis, info[c('Locus', 'Subtype', 'domain', 'species')], by = c('locus' = 'Locus'))
   
   #convert from tibble to df
   effector_analysis <- as.data.frame(effector_analysis)
@@ -256,8 +259,12 @@ for(i in seq_along(tree_files)) {
     dir.create(tsv_dir)
   }
   
-  tsv_filename <- paste0("data/",project,"/plots/effectors/tables/", sub("_tree.txt", "_data.tsv", basename(tree_files[i])))
-  write.table(effector_analysis, tsv_filename, sep = "\t", row.names = FALSE, col.names = TRUE)
+  #reorder columns with dplyr
+  effector_analysis <- effector_analysis %>%
+    select(query_name, target_name, target_accession, description.of.target, effector, locus, locus_protein_domain, species, protein_length, Subtype, domain, tlen, qlen, E.value, score, c.Evalue, i.Evalue, domain_score, domain_bias, hmm_start, hmm_end, ali_start, ali_end, env_from, env_to, acc, accession, bias, X., of, protein, cora)
+  
+  
+  #the table is saved after generating trees and annotation figures
   
   # create a ggtree object
   gtree <- ggtree(trees[[i]], 
@@ -693,7 +700,11 @@ for(i in seq_along(tree_files)) {
     patch_index <- patch_index + 3
   }
   
+  #remove some redundant columns from effector_analysis: accession, bias, X., of, protein, cora
+  effector_analysis <- effector_analysis[, !names(effector_analysis) %in% c("accession", "bias", "X.", "of", "protein", "cora", "effector")]
   
+  tsv_filename <- paste0("data/",project,"/plots/effectors/tables/", sub("_tree.txt", "_data.tsv", basename(tree_files[i])))
+  write.table(effector_analysis, tsv_filename, sep = "\t", row.names = FALSE, col.names = TRUE)
 }
 
 # add annotation to patchwork
@@ -1582,7 +1593,7 @@ names(info_multiple_loci_beforeDuplicateRemoval_list) <- names(info_multiple_loc
 names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'cam1'] <- 'Cam1'
 names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'cam2'] <- 'Cam2'
 names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'cam3'] <- 'Cam3'
-names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'can3'] <- 'Can3'
+names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'can3'] <- 'Csm6-2'
 names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'csm6.ca6'] <- 'Csm6'
 names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'saved.chat'] <- 'SAVED-CHAT'
 names(info_multiple_loci_effectors_upset)[names(info_multiple_loci_effectors_upset) == 'tirsaved'] <- 'TIR-SAVED'
@@ -1707,6 +1718,10 @@ p2 <- ggplot(data = info, aes(x=has_effector, y = after_stat(count), fill = mult
   #rename x axis labels
   scale_fill_manual(values = colorBlindBlack8)
 p2
+
+#get loci with no effector and without nuclease domain
+info_no_effectors_HD <- subset(info, (has_effector == FALSE) & (Cas10_HD == FALSE) & (cyclase == TRUE))
+nrow(info_no_effectors_HD)
 
 # model formulated in a generalised linear model
 info$no_effector <- !info$has_effector
