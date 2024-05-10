@@ -753,6 +753,9 @@ cora_positives_info <- dplyr::rename(cora_positives_info, locus = Locus)
 cora_mastertable <- merge(cora_neighbours, cora_positives_info, by = "locus")
 rownames(cora_mastertable) <- cora_mastertable$locus #set rownames
 
+#rename column can3 to Csm6-2
+cora_mastertable <- dplyr::rename(cora_mastertable, "Csm6-2" = "can3")
+
 #load fasta
 #remove protein ids from headers
 cora_fasta_path <- paste("data/",project,"/cora_neighbourhood/CorA_alignment.afa", sep = "")
@@ -765,23 +768,17 @@ writeXStringSet(cora_fasta, filepath = cora_fasta_fixed_path)
 #remove protein id from tip labels to only include locus
 cora_tree[["tip.label"]] <- sub("__.*", "", cora_tree[["tip.label"]])
 
-cora_associations <- c("dedd", "nrn", "samlyase", "can3", "csx1", "can1.2")
-custom_labels_cora <- c("DEDD", "NrN", "SAM-LYASE", "Can3", "Csx1", "Can1-2")
+cora_associations <- c("dedd", "nrn", "samlyase", "Csm6-2", "csx1", "can1.2")
+custom_labels_cora <- c("DEDD", "NrN", "SAM-LYASE", "Csm6-2", "Csx1", "Can1-2")
 
-cora_associations <- c("dedd", "nrn", "samlyase", "can3")
-custom_labels_cora <- c("DEDD", "NrN", "SAM-LYASE", "Can3")
+cora_associations <- c("dedd", "nrn", "samlyase", "Csm6-2")
+custom_labels_cora <- c("DEDD", "NrN", "SAM-LYASE", "Csm6-2")
 
-custom_true_colors <- c("dedd" = "#E69F00", "nrn" = "#56B4E9", "samlyase" = "#009E73", "can3" = "#F0E442", "csx1" = "#0072B2", "can1.2" = "#D55E00")
+custom_true_colors <- c("dedd" = "#3d3d3d", "nrn" = "#8c8c8c", "samlyase" = "#c7c7c7", "Csm6-2" = "#F0E442", "csx1" = "#0072B2", "can1.2" = "#D55E00")
 
-
-# Get palette of 6 blue colors from light to dark
-blue_palette <- colorRampPalette(brewer.pal(9, "Blues"))
-# Create a vector of 6 blue colors
-custom_blue_colors <- blue_palette(9)[3:8]
-names(custom_blue_colors) <- c("dedd", "nrn", "samlyase", "can3", "csx1", "can1.2")
-
-#change can3 to color to #ff743e
-custom_blue_colors["can3"] <- "#ff743e"
+# Create a vector of colors
+custom_blue_colors <- c("#3d3d3d", "#8c8c8c", "#c7c7c7", "#ff743e")
+names(custom_blue_colors) <- c("dedd", "nrn", "samlyase", "Csm6-2")
 
 names(custom_labels_cora) <- cora_associations
 offsets_cora <- c(0, 0.1, 0.2, 0.4, 0.7, 0.9)
@@ -830,7 +827,7 @@ pCora2 <- pCora2 +
 
 #pCora2 <- pCora + geom_tiplab(aes(label=label), hjust = -0.5, size = 3) #accession numbers
 
-plot_path = paste("data/",project,"/plots/cora_neighbourhood_species.png", sep="")
+plot_path = paste("data/",project,"/plots/cora_neighbourhood_species.pdf", sep="")
 ggsave(plot_path, pCora2, height = 6, width = 6)
 
 #### Potential novel effectors ("group4") plotting ####
