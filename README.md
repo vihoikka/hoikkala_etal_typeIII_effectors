@@ -1,8 +1,6 @@
 # hoikkala_etal_typeIII_effectors
 A Snakemake pipeline that characterises type III CRISPR-Cas loci and aims to discover new cOA-dependent effectors. Scripts used to generate the data on Hoikkala, Graham and White 2024 paper on new type III CRISPR-Cas effectors.
 
-Currently for review only.
-
 The run command that reproduces the results of the paper:
 
 ```snakemake --snakefile new_effectors.smk --use-conda --cores 40 --config getGenomesBy="local" genome_mode="all" cas10_anchor="True" cas10_tree_cluster="False"```
